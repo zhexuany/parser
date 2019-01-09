@@ -2741,6 +2741,16 @@ func (s *testParserSuite) TestVisitFrameBound(c *C) {
 	}
 
 }
+func (s *testParserSuite) TestUsingStorage(c *C) {
+	parser := New()
+	stmts, _, err := parser.Parse("select a from t use tiflash", "", "")
+	c.Assert(err, IsNil)
+	tmp := stmts[0].(*ast.SelectStmt)
+	//ts := tmp.From.TableRefs.Left.(*ast.TableSource)
+	//ts := tmp.From.TableRefs.(*ast.TableSource)
+	source := tmp.From.TableRefs.Left.(*ast.TableSource)
+	c.Assert(source.UseFlash, Equals, true)
+}
 
 func (s *testParserSuite) TestFieldText(c *C) {
 	parser := New()

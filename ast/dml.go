@@ -360,6 +360,8 @@ type TableSource struct {
 
 	// AsName is the alias name of the table source.
 	AsName model.CIStr
+
+	UseFlash bool
 }
 
 // Restore implements Node interface.

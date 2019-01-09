@@ -482,6 +482,8 @@ import (
 	tidbHJ		"TIDB_HJ"
 	tidbSMJ		"TIDB_SMJ"
 	tidbINLJ	"TIDB_INLJ"
+	tikv		"TIKV"
+	tiflash		"TIFLASH"
 	restore		"RESTORE"
 
 	builtinAddDate
@@ -600,7 +602,7 @@ import (
 	RevokeStmt			"Revoke statement"
 	RollbackStmt			"ROLLBACK statement"
 	SetStmt				"Set variable statement"
-	ShowStmt			"Show engines/databases/tables/user/columns/warnings/status statement"
+	ShowStmt			"Show engines/databases/tables/columns/warnings/status statement"
 	Statement			"statement"
 	TraceStmt			"TRACE statement"
 	TraceableStmt			"traceable statment"
@@ -648,6 +650,7 @@ import (
 	DatabaseOptionList		"CREATE Database specification list"
 	DatabaseOptionListOpt		"CREATE Database specification list opt"
 	DBName				"Database Name"
+	Storage				"Storage Name"
 	DistinctOpt			"Explicit distinct option"
 	DefaultFalseDistinctOpt		"Distinct option which defaults to false"
 	DefaultTrueDistinctOpt		"Distinct option which defaults to true"
@@ -807,6 +810,7 @@ import (
 	ViewFieldList		"create view statement field list"
 	ViewSQLSecurity		"view sql security"
 	WhereClause		"WHERE clause"
+	UseStorage		"use storage"
 	WhereClauseOptional	"Optional WHERE clause"
 	WhenClause		"When clause"
 	WhenClauseList		"When clause list"
@@ -1850,6 +1854,16 @@ DBName:
 	Identifier
 	{
 		$$ = $1
+	}
+
+Storage:
+	"TIKV"
+	{
+		$$ = "tikv"
+	}
+|	"TIFLASH"
+	{
+		$$ = "tiflash"
 	}
 
 DatabaseOption:
@@ -2996,7 +3010,7 @@ UnReservedKeyword:
 
 
 TiDBKeyword:
-"ADMIN" | "BUCKETS" | "CANCEL" | "DDL" | "JOBS" | "JOB" | "STATS" | "STATS_META" | "STATS_HISTOGRAMS" | "STATS_BUCKETS" | "STATS_HEALTHY" | "TIDB" | "TIDB_HJ" | "TIDB_SMJ" | "TIDB_INLJ" | "RESTORE"
+"ADMIN" | "BUCKETS" | "CANCEL" | "DDL" | "JOBS" | "JOB" | "STATS" | "STATS_META" | "STATS_HISTOGRAMS" | "STATS_BUCKETS" | "STATS_HEALTHY" | "TIDB" | "TIDB_HJ" | "TIDB_SMJ" | "TIDB_INLJ" | "RESTORE" | "TIKV" | "TIFLASH"
 
 NotKeywordToken:
  "ADDDATE" | "BIT_AND" | "BIT_OR" | "BIT_XOR" | "CAST" | "COPY" | "COUNT" | "CURTIME" | "DATE_ADD" | "DATE_SUB" | "EXTRACT" | "GET_FORMAT" | "GROUP_CONCAT"
@@ -4509,6 +4523,7 @@ SelectStmtFromTable:
 			lastEnd := parser.endOffset(&yyS[yypt-5])
 			lastField.SetText(parser.src[lastField.Offset:lastEnd])
 		}
+
 		if $4 != nil {
 			st.Where = $4.(ast.ExprNode)
 		}
@@ -4942,6 +4957,15 @@ TableFactor:
 		tn := $1.(*ast.TableName)
 		tn.IndexHints = $3.([]*ast.IndexHint)
 		$$ = &ast.TableSource{Source: tn, AsName: $2.(model.CIStr)}
+	}
+| 	TableName TableAsNameOpt UseStorage
+	{
+		tn := $1.(*ast.TableName)
+		var useFlash bool
+		if $3.(string) == "tiflash" {
+			useFlash = true
+		}
+		$$ = &ast.TableSource{Source: tn, AsName: $2.(model.CIStr), UseFlash: useFlash}
 	}
 |	'(' SelectStmt ')' TableAsName
 	{
@@ -5907,14 +5931,6 @@ ShowStmt:
 			DBName:	$5.(string),
 		}
 	}
-|	"SHOW" "CREATE" "USER" Username
-        {
-                // See https://dev.mysql.com/doc/refman/5.7/en/show-create-user.html
-                $$ = &ast.ShowStmt{
-                        Tp:	ast.ShowCreateUser,
-                        User:	$4.(*auth.UserIdentity),
-                }
-        }
 |	"SHOW" "GRANTS"
 	{
 		// See https://dev.mysql.com/doc/refman/5.7/en/show-grants.html
@@ -7165,6 +7181,12 @@ UseStmt:
 	"USE" DBName
 	{
 		$$ = &ast.UseStmt{DBName: $2.(string)}
+	}
+
+UseStorage:
+	"USE" Storage
+	{
+		$$ = $2.(string)
 	}
 
 WhereClause:

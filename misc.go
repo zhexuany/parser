@@ -479,6 +479,8 @@ var tokenMap = map[string]int{
 	"TIDB_HJ":                  tidbHJ,
 	"TIDB_INLJ":                tidbINLJ,
 	"TIDB_SMJ":                 tidbSMJ,
+	"TIKV":                     tikv,
+	"TIFLASH":                  tiflash,
 	"TIME":                     timeType,
 	"TIMESTAMP":                timestampType,
 	"TIMESTAMPADD":             timestampAdd,
